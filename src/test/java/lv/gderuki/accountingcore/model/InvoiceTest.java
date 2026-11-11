@@ -16,7 +16,7 @@ public class InvoiceTest {
     void changingSourceListDoesNotChangeInvoiceLines() {
         var invoiceLines = new ArrayList<InvoiceLine>();
         final var testLineUUID = UUID.randomUUID();
-        var testLine = new InvoiceLine(testLineUUID, null, null, null, null, null);
+        var testLine = new InvoiceLine(testLineUUID, null, null, null, null);
         invoiceLines.add(testLine);
         var invoice = new Invoice(UUID.randomUUID(), UUID.randomUUID(), null, null, InvoiceStatus.DRAFT, null, null, BigDecimal.ZERO, invoiceLines);
 
@@ -30,7 +30,7 @@ public class InvoiceTest {
     void changingSourceListViaGetterThrowsAnException() {
         var invoiceLines = new ArrayList<InvoiceLine>();
         final var testLineUUID = UUID.randomUUID();
-        var testLine = new InvoiceLine(testLineUUID, null, null, null, null, null);
+        var testLine = new InvoiceLine(testLineUUID, null, null, null, null);
         invoiceLines.add(testLine);
         var invoice = new Invoice(UUID.randomUUID(), UUID.randomUUID(), null, null, InvoiceStatus.DRAFT, null, null, BigDecimal.ZERO, invoiceLines);
 
