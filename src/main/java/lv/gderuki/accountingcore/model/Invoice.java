@@ -4,6 +4,7 @@ import jakarta.annotation.Nullable;
 import lombok.Getter;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
@@ -27,12 +28,13 @@ public final class Invoice {
     @Nullable
     private final LocalDate issueDate;
     private final String currency = "EUR";
+    @Nullable
     private final BigDecimal calculatedTotal;
-    private final List<InvoiceLine> lines;
+    private final List<InvoiceLine> invoiceLines;
 
     public Invoice(UUID id, UUID organizationId, @Nullable String buyer, @Nullable String seller,
                    InvoiceStatus status, @Nullable String documentNumber, @Nullable LocalDate issueDate,
-                   BigDecimal calculatedTotal, List<InvoiceLine> lines) {
+                   List<InvoiceLine> invoiceLines) {
         this.id = Objects.requireNonNull(id, "id");
         this.organizationId = Objects.requireNonNull(organizationId, "organizationId");
         this.buyer = buyer;
@@ -40,7 +42,17 @@ public final class Invoice {
         this.status = Objects.requireNonNull(status, "status");
         this.documentNumber = documentNumber;
         this.issueDate = issueDate;
-        this.calculatedTotal = Objects.requireNonNull(calculatedTotal, "calculatedTotal");
-        this.lines = List.copyOf(lines);
+        var linesSnapshot = List.copyOf(invoiceLines);
+        this.invoiceLines = linesSnapshot;
+
+        if (linesSnapshot.isEmpty()) {
+            this.calculatedTotal = BigDecimal.ZERO.setScale(2, RoundingMode.UNNECESSARY);
+        } else if (linesSnapshot.stream().anyMatch(i -> i.getCalculatedTotal() == null)) {
+            this.calculatedTotal = null;
+        } else {
+            this.calculatedTotal = linesSnapshot.stream()
+                    .map(InvoiceLine::getCalculatedTotal)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+        }
     }
 }

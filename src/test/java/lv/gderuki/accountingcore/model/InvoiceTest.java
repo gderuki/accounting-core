@@ -1,10 +1,16 @@
 package lv.gderuki.accountingcore.model;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -18,12 +24,12 @@ public class InvoiceTest {
         final var testLineUUID = UUID.randomUUID();
         var testLine = new InvoiceLine(testLineUUID, null, null, null, null);
         invoiceLines.add(testLine);
-        var invoice = new Invoice(UUID.randomUUID(), UUID.randomUUID(), null, null, InvoiceStatus.DRAFT, null, null, BigDecimal.ZERO, invoiceLines);
+        var invoice = new Invoice(UUID.randomUUID(), UUID.randomUUID(), null, null, InvoiceStatus.DRAFT, null, null, invoiceLines);
 
         invoiceLines.clear();
 
-        assertEquals(testLineUUID, invoice.getLines().getFirst().getId());
-        assertEquals(1, invoice.getLines().size());
+        assertEquals(testLineUUID, invoice.getInvoiceLines().getFirst().getId());
+        assertEquals(1, invoice.getInvoiceLines().size());
     }
 
     @Test
@@ -32,11 +38,43 @@ public class InvoiceTest {
         final var testLineUUID = UUID.randomUUID();
         var testLine = new InvoiceLine(testLineUUID, null, null, null, null);
         invoiceLines.add(testLine);
-        var invoice = new Invoice(UUID.randomUUID(), UUID.randomUUID(), null, null, InvoiceStatus.DRAFT, null, null, BigDecimal.ZERO, invoiceLines);
+        var invoice = new Invoice(UUID.randomUUID(), UUID.randomUUID(), null, null, InvoiceStatus.DRAFT, null, null, invoiceLines);
 
-        assertThrows(UnsupportedOperationException.class, () -> invoice.getLines().add(testLine));
-        assertEquals(testLineUUID, invoice.getLines().getFirst().getId());
-        assertEquals(1, invoice.getLines().size());
+        assertThrows(UnsupportedOperationException.class, () -> invoice.getInvoiceLines().add(testLine));
+        assertEquals(testLineUUID, invoice.getInvoiceLines().getFirst().getId());
+        assertEquals(1, invoice.getInvoiceLines().size());
+    }
+
+    @ParameterizedTest
+    @MethodSource("invoiceTotalCases")
+    void calculatesTotalBasedOnInvoiceLines(List<InvoiceLine> invoiceLines, BigDecimal expectedTotal) {
+        var invoice = new Invoice(UUID.randomUUID(), UUID.randomUUID(), null, null, InvoiceStatus.DRAFT, null, null, invoiceLines);
+        assertEquals(expectedTotal, invoice.getCalculatedTotal());
+    }
+
+    private static Stream<Arguments> invoiceTotalCases() {
+        return Stream.of(
+                Arguments.of(List.<InvoiceLine>of(), new BigDecimal("0.00")),
+                Arguments.of(
+                        List.of(
+                                new InvoiceLine(UUID.randomUUID(), null, new BigDecimal(2), null, null),
+                                new InvoiceLine(UUID.randomUUID(), null, new BigDecimal(2), null, new BigDecimal("100.50"))
+                        ), null),
+                Arguments.of(
+                        List.of(
+                                new InvoiceLine(UUID.randomUUID(), null, new BigDecimal(2), null, new BigDecimal("50.00")),
+                                new InvoiceLine(UUID.randomUUID(), null, new BigDecimal(8), null, new BigDecimal("50.00"))
+                        ), new BigDecimal("500.00")),
+                Arguments.of(
+                        List.of(
+                                new InvoiceLine(UUID.randomUUID(), null, new BigDecimal(1), null, BigDecimal.ZERO.setScale(2, RoundingMode.UNNECESSARY))
+                        ), BigDecimal.ZERO.setScale(2, RoundingMode.UNNECESSARY)),
+                Arguments.of(
+                        List.of(
+                                new InvoiceLine(UUID.randomUUID(), null, new BigDecimal(3), null, new BigDecimal("0.335")),
+                                new InvoiceLine(UUID.randomUUID(), null, new BigDecimal(3), null, new BigDecimal("0.335"))
+                        ), new BigDecimal("2.02"))
+        );
     }
 
 }
