@@ -77,4 +77,139 @@ public class InvoiceTest {
         );
     }
 
+    @ParameterizedTest
+    @MethodSource("draftValidationCases")
+    void validatesDraftBasedOnSuppliedLineValues(
+            List<InvoiceLine> lines,
+            List<InvoiceValidationError> expectedErrors) {
+
+        var invoice = new Invoice(
+                UUID.randomUUID(), UUID.randomUUID(),
+                null, null, InvoiceStatus.DRAFT, null, null, lines);
+
+        assertEquals(expectedErrors, invoice.validateDraft());
+    }
+
+    private static Stream<Arguments> draftValidationCases() {
+        var lineId = UUID.randomUUID();
+        var secondLineId = UUID.randomUUID();
+
+        return Stream.of(
+                Arguments.of(
+                        List.of(
+
+                        ), List.<InvoiceValidationError>of()
+                ),
+                Arguments.of(
+                        List.of(
+                                new InvoiceLine(lineId, null, BigDecimal.ONE, null, BigDecimal.ONE.setScale(2, RoundingMode.UNNECESSARY))
+                        ),
+                        List.<InvoiceValidationError>of()
+                ),
+                Arguments.of(
+                        List.of(
+                                new InvoiceLine(lineId, null, BigDecimal.ONE, null, BigDecimal.ZERO.setScale(2, RoundingMode.UNNECESSARY))
+                        ),
+                        List.<InvoiceValidationError>of()
+                ),
+                Arguments.of(
+                        List.of(new InvoiceLine(
+                                lineId, null, BigDecimal.ONE.negate(),
+                                null, new BigDecimal("10.00"))),
+                        List.of(new InvoiceValidationError(
+                                "AC_01",
+                                "quantity",
+                                lineId,
+                                "Quantity must be greater than zero"
+                        ))
+                ),
+                Arguments.of(
+                        List.of(
+                                new InvoiceLine(
+                                        lineId, null, null,
+                                        null, BigDecimal.ONE.negate())
+                        ),
+                        List.of(
+                                new InvoiceValidationError(
+                                        "AC_02",
+                                        "unitPrice",
+                                        lineId,
+                                        "Unit price must be greater than or equal to zero"
+                                )
+                        )
+                ),
+                Arguments.of(
+                        List.of(
+                                new InvoiceLine(
+                                        lineId, null, BigDecimal.ONE.negate(),
+                                        null, null)
+                        ),
+                        List.of(
+                                new InvoiceValidationError(
+                                        "AC_01",
+                                        "quantity",
+                                        lineId,
+                                        "Quantity must be greater than zero"
+                                )
+                        )
+                ),
+                Arguments.of(
+                        List.of(
+                                new InvoiceLine(
+                                        lineId, null, BigDecimal.ZERO,
+                                        null, BigDecimal.ONE.setScale(2, RoundingMode.UNNECESSARY)),
+                                new InvoiceLine(
+                                        secondLineId, null, BigDecimal.ONE,
+                                        null, BigDecimal.ONE.negate().setScale(2, RoundingMode.UNNECESSARY))
+                        ),
+                        List.of(
+                                new InvoiceValidationError(
+                                        "AC_01",
+                                        "quantity",
+                                        lineId,
+                                        "Quantity must be greater than zero"
+                                ),
+                                new InvoiceValidationError(
+                                        "AC_02",
+                                        "unitPrice",
+                                        secondLineId,
+                                        "Unit price must be greater than or equal to zero"
+                                )
+                        )
+                ),
+                Arguments.of(
+                        List.of(new InvoiceLine(
+                                lineId, null, BigDecimal.ONE,
+                                null, new BigDecimal("-10.00"))),
+                        List.of(new InvoiceValidationError(
+                                "AC_02",
+                                "unitPrice",
+                                lineId,
+                                "Unit price must be greater than or equal to zero"
+                        ))
+                ),
+                Arguments.of(
+                        List.of(
+                                new InvoiceLine(
+                                        lineId, null, BigDecimal.ZERO,
+                                        null, BigDecimal.ONE.negate())
+                        ),
+                        List.of(
+                                new InvoiceValidationError(
+                                        "AC_01",
+                                        "quantity",
+                                        lineId,
+                                        "Quantity must be greater than zero"
+                                ),
+                                new InvoiceValidationError(
+                                        "AC_02",
+                                        "unitPrice",
+                                        lineId,
+                                        "Unit price must be greater than or equal to zero"
+                                )
+                        )
+                )
+
+        );
+    }
 }

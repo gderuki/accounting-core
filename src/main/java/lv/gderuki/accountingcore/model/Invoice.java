@@ -6,6 +6,7 @@ import lombok.Getter;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -54,5 +55,34 @@ public final class Invoice {
                     .map(InvoiceLine::getCalculatedTotal)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
         }
+    }
+
+    public List<InvoiceValidationError> validateDraft() {
+        var errors = new ArrayList<InvoiceValidationError>();
+
+        for (var line : invoiceLines) {
+            var quantity = line.getQuantity();
+
+            if (quantity != null && quantity.signum() <= 0) {
+                errors.add(new InvoiceValidationError(
+                        "AC_01", // TBD
+                        "quantity",
+                        line.getId(),
+                        "Quantity must be greater than zero"
+                ));
+            }
+
+            var unitPrice = line.getUnitPrice();
+            if (unitPrice != null && unitPrice.compareTo(BigDecimal.ZERO) < 0) {
+                errors.add(new InvoiceValidationError(
+                        "AC_02", // TBD
+                        "unitPrice",
+                        line.getId(),
+                        "Unit price must be greater than or equal to zero"
+                ));
+            }
+        }
+
+        return List.copyOf(errors);
     }
 }
