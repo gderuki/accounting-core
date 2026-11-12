@@ -1,6 +1,5 @@
 package lv.gderuki.accountingcore.model;
 
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
@@ -12,14 +11,17 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 class InvoiceLineTest {
 
-    @Test
-    void calculatesTotalWithHalfUpRoundingWithoutRoundingUnitPriceFirst() {
-        var quantity = new BigDecimal("3");
-        var unitPrice = new BigDecimal("0.335");
-
+    @ParameterizedTest
+    @CsvSource({
+            "3, 0.335, 1.01",
+            "2.5, 12.345, 30.86",
+            "10, 50, 500.00",
+            "1, 0, 0.00"
+    })
+    void calculatesTotalWithHalfUpRoundingWithoutRoundingUnitPriceFirst(BigDecimal quantity, BigDecimal unitPrice, BigDecimal expectedTotal) {
         var line = new InvoiceLine(UUID.randomUUID(), "Development", quantity, "HOUR", unitPrice);
 
-        assertEquals(new BigDecimal("1.01"), line.getCalculatedTotal());
+        assertEquals(expectedTotal, line.getCalculatedTotal());
     }
 
     @ParameterizedTest
