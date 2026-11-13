@@ -208,8 +208,15 @@ public class InvoiceTest {
                                         "Unit price must be greater than or equal to zero"
                                 )
                         )
+                ),
+                Arguments.of(
+                        List.of(
+                                new InvoiceLine(
+                                        lineId, null, null,
+                                        null, null)
+                        ),
+                        List.<InvoiceValidationError>of()
                 )
-
         );
     }
 }
