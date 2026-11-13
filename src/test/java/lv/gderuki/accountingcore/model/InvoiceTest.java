@@ -12,8 +12,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
 
 public class InvoiceTest {
@@ -218,5 +217,37 @@ public class InvoiceTest {
                         List.<InvoiceValidationError>of()
                 )
         );
+    }
+
+    @Test
+    void testCreateDraftInvoiceFactory() {
+        UUID organizationId = UUID.randomUUID();
+
+        Invoice draftInvoice = Invoice.createDraftInvoice(organizationId);
+
+        assertNotNull(draftInvoice.getId());
+        assertEquals(organizationId, draftInvoice.getOrganizationId());
+        assertNull(draftInvoice.getBuyer());
+        assertNull(draftInvoice.getSeller());
+        assertEquals(InvoiceStatus.DRAFT, draftInvoice.getStatus());
+        assertNull(draftInvoice.getDocumentNumber());
+        assertNull(draftInvoice.getIssueDate());
+        assertEquals(List.of(), draftInvoice.getInvoiceLines());
+        assertEquals(new BigDecimal("0.00"), draftInvoice.getCalculatedTotal());
+    }
+
+    @Test
+    void sameOrganizationIdProvidedWillCreateDifferentInvoices() {
+        UUID organizationId = UUID.randomUUID();
+
+        Invoice draftInvoice1 = Invoice.createDraftInvoice(organizationId);
+        Invoice draftInvoice2 = Invoice.createDraftInvoice(organizationId);
+
+        assertNotEquals(draftInvoice1.getId(), draftInvoice2.getId());
+    }
+
+    @Test
+    void nullOrganizationIdWillThrowNullPointerException() {
+        assertThrows(NullPointerException.class, () -> Invoice.createDraftInvoice(null));
     }
 }

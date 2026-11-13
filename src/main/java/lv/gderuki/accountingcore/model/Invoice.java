@@ -85,4 +85,17 @@ public final class Invoice {
 
         return List.copyOf(errors);
     }
+
+    public static Invoice createDraftInvoice(UUID organizationId) {
+        return new Invoice(
+                UUID.randomUUID(),
+                organizationId,
+                null,
+                null,
+                InvoiceStatus.DRAFT,
+                null,
+                null,
+                List.of()
+        );
+    }
 }
