@@ -6,7 +6,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -66,8 +65,8 @@ public class InvoiceTest {
                         ), new BigDecimal("500.00")),
                 Arguments.of(
                         List.of(
-                                new InvoiceLine(UUID.randomUUID(), null, new BigDecimal(1), null, BigDecimal.ZERO.setScale(2, RoundingMode.UNNECESSARY))
-                        ), BigDecimal.ZERO.setScale(2, RoundingMode.UNNECESSARY)),
+                                new InvoiceLine(UUID.randomUUID(), null, new BigDecimal(1), null, new BigDecimal("0.00"))
+                        ), new BigDecimal("0.00")),
                 Arguments.of(
                         List.of(
                                 new InvoiceLine(UUID.randomUUID(), null, new BigDecimal(3), null, new BigDecimal("0.335")),
@@ -101,13 +100,13 @@ public class InvoiceTest {
                 ),
                 Arguments.of(
                         List.of(
-                                new InvoiceLine(lineId, null, BigDecimal.ONE, null, BigDecimal.ONE.setScale(2, RoundingMode.UNNECESSARY))
+                                new InvoiceLine(lineId, null, BigDecimal.ONE, null, new BigDecimal("1.00"))
                         ),
                         List.<InvoiceValidationError>of()
                 ),
                 Arguments.of(
                         List.of(
-                                new InvoiceLine(lineId, null, BigDecimal.ONE, null, BigDecimal.ZERO.setScale(2, RoundingMode.UNNECESSARY))
+                                new InvoiceLine(lineId, null, BigDecimal.ONE, null, new BigDecimal("0.00"))
                         ),
                         List.<InvoiceValidationError>of()
                 ),
@@ -156,10 +155,10 @@ public class InvoiceTest {
                         List.of(
                                 new InvoiceLine(
                                         lineId, null, BigDecimal.ZERO,
-                                        null, BigDecimal.ONE.setScale(2, RoundingMode.UNNECESSARY)),
+                                        null, new BigDecimal("1.00")),
                                 new InvoiceLine(
                                         secondLineId, null, BigDecimal.ONE,
-                                        null, BigDecimal.ONE.negate().setScale(2, RoundingMode.UNNECESSARY))
+                                        null, new BigDecimal("-1.00"))
                         ),
                         List.of(
                                 new InvoiceValidationError(
@@ -249,5 +248,71 @@ public class InvoiceTest {
     @Test
     void nullOrganizationIdWillThrowNullPointerException() {
         assertThrows(NullPointerException.class, () -> Invoice.createDraftInvoice(null));
+    }
+
+    @Test
+    void updatingDraftInvoiceSuccessfully() {
+        var organizationId = UUID.randomUUID();
+        var invoiceLineId = UUID.randomUUID();
+        var draftInvoice = Invoice.createDraftInvoice(organizationId);
+
+        var buyer = "buyer";
+        var seller = "seller";
+        var invoiceLines = new ArrayList<InvoiceLine>();
+        var sampleInvoiceLine = new InvoiceLine(invoiceLineId, null, new BigDecimal(3), null, new BigDecimal("5.00"));
+        invoiceLines.add(sampleInvoiceLine);
+        var updatedInvoice = draftInvoice.updateExistingDraftInvoice(buyer, seller, invoiceLines);
+
+        assertEquals(invoiceLines.getFirst().getId(), updatedInvoice.getInvoiceLines().getFirst().getId());
+        assertEquals(buyer, updatedInvoice.getBuyer());
+        assertEquals(seller, updatedInvoice.getSeller());
+        assertEquals(new BigDecimal("15.00"), updatedInvoice.getCalculatedTotal());
+        assertNotSame(draftInvoice, updatedInvoice);
+        assertEquals(draftInvoice.getId(), updatedInvoice.getId());
+        assertEquals(organizationId, updatedInvoice.getOrganizationId());
+        assertEquals(InvoiceStatus.DRAFT, updatedInvoice.getStatus());
+        assertNull(draftInvoice.getBuyer());
+        assertNull(draftInvoice.getSeller());
+        assertTrue(draftInvoice.getInvoiceLines().isEmpty());
+        assertEquals(new BigDecimal("0.00"), draftInvoice.getCalculatedTotal());
+    }
+
+    @Test
+    void clearInvoiceDataSuccessfully() {
+        var organizationId = UUID.randomUUID();
+        var invoiceLineId = UUID.randomUUID();
+        var draftInvoice = Invoice.createDraftInvoice(organizationId);
+
+        var buyer = "buyer";
+        var seller = "seller";
+        var invoiceLines = new ArrayList<InvoiceLine>();
+        var sampleInvoiceLine = new InvoiceLine(invoiceLineId, null, new BigDecimal(3), null, new BigDecimal("5.00"));
+        invoiceLines.add(sampleInvoiceLine);
+
+        var updatedInvoice = draftInvoice.updateExistingDraftInvoice(buyer, seller, invoiceLines);
+
+        assertEquals(invoiceLines.getFirst().getId(), updatedInvoice.getInvoiceLines().getFirst().getId());
+        assertEquals(buyer, updatedInvoice.getBuyer());
+        assertEquals(seller, updatedInvoice.getSeller());
+        assertEquals(new BigDecimal("15.00"), updatedInvoice.getCalculatedTotal());
+
+        var clearedInvoice = updatedInvoice.updateExistingDraftInvoice(null, null, List.of());
+
+        assertTrue(clearedInvoice.getInvoiceLines().isEmpty());
+        assertNull(clearedInvoice.getBuyer());
+        assertNull(clearedInvoice.getSeller());
+        assertEquals(new BigDecimal("0.00"), clearedInvoice.getCalculatedTotal());
+    }
+
+    @Test
+    void rejectsUpdatingIssuedInvoice() {
+        var issuedInvoice = new Invoice(
+                UUID.randomUUID(), UUID.randomUUID(), "buyer", "seller",
+                InvoiceStatus.ISSUED, "2026/001", java.time.LocalDate.of(2026, 11, 14),
+                List.of(new InvoiceLine(UUID.randomUUID(), "Service", BigDecimal.ONE,
+                        "hour", new BigDecimal("15.00"))));
+
+        assertThrows(IllegalStateException.class,
+                () -> issuedInvoice.updateExistingDraftInvoice(null, null, List.of()));
     }
 }

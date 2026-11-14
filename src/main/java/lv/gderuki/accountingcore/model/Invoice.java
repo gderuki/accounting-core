@@ -98,4 +98,22 @@ public final class Invoice {
                 List.of()
         );
     }
+
+    public Invoice updateExistingDraftInvoice(@Nullable String buyer, @Nullable String seller,
+                                             List<InvoiceLine> invoiceLines) {
+        if (this.status != InvoiceStatus.DRAFT) {
+            throw new IllegalStateException("Only draft invoices can be updated");
+        }
+
+        return new Invoice(
+                this.id,
+                this.organizationId,
+                buyer,
+                seller,
+                InvoiceStatus.DRAFT,
+                null,
+                null,
+                invoiceLines
+        );
+    }
 }
